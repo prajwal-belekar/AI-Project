@@ -57,3 +57,21 @@ Open http://localhost:3000
 - If UI shows Backend Disconnected, make sure FastAPI is running on port 8000.
 - If no detections happen, check webcam access and lighting.
 - If Python import errors occur, confirm you installed requirements in the active Python environment.
+
+
+
+first time setup
+cd C:\Users\hp\intrusion-detection
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+npm install
+
+run backend 
+cd C:\Users\hp\intrusion-detection
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn components.server:app --host 0.0.0.0 --port 8000 --reload
+
+run frontend 
+cd C:\Users\hp\intrusion-detection
+npm run dev
