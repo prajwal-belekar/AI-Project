@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Human Intrusion Detection
 
-## Getting Started
+This project detects humans from your webcam feed and shows live intrusion alerts in a Next.js dashboard.
 
-First, run the development server:
+## Tech stack
+
+- Frontend: Next.js (App Router)
+- Backend: FastAPI + OpenCV
+- Detector: YOLOv4 (auto-downloaded on first run)
+
+## 1) Install dependencies
+
+Frontend:
+
+```bash
+npm install
+```
+
+Backend (Python 3.10+ recommended):
+
+```bash
+pip install -r requirements.txt
+```
+
+## 2) Run backend server
+
+From the project root:
+
+```bash
+uvicorn components.server:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Notes:
+
+- The first run can take time because YOLOv4 files are downloaded automatically.
+- Allow webcam permission when prompted by your OS.
+
+## 3) Run frontend server
+
+In another terminal:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## 4) How intrusion alert works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Backend streams camera frames at http://localhost:8000/video
+- Frontend displays the stream and listens to WebSocket alerts at ws://localhost:8000/ws
+- When a human intrusion is confirmed, UI shows alert and timestamp
+- Click Resume Surveillance to clear alert state
 
-## Learn More
+## Troubleshooting
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- If UI shows Backend Disconnected, make sure FastAPI is running on port 8000.
+- If no detections happen, check webcam access and lighting.
+- If Python import errors occur, confirm you installed requirements in the active Python environment.

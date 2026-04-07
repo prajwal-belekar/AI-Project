@@ -7,7 +7,7 @@ import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-ENGINE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../project3"))
+ENGINE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../project3"))
 sys.path.append(ENGINE_PATH)
 import pyttsx3
 engine = pyttsx3.init()
@@ -330,12 +330,10 @@ async def stream_frames():
                 ))
 
                 payload = {
-                    "alert": "intrusion",
+                    "type": "intrusion",
                     "confidence": float(confidence),
                     "time": str(timestamp)
                 }
-
-                await hub.notify(payload)
 
                 await hub.notify(payload)
 
@@ -383,6 +381,7 @@ async def websocket_endpoint(ws: WebSocket):
         hub.disconnect(ws)
 
 @app.get("/reset")
-def reset():
+async def reset():
     state["intrusion"] = False
+    await hub.notify({"type": "reset"})
     return {"status": "reset"}

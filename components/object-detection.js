@@ -3,55 +3,79 @@
 import React, { useEffect, useState } from "react";
 
 const WebcamView = () => {
+  const backendBaseUrl =
+    process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+  const websocketBaseUrl = backendBaseUrl.replace(/^http/i, "ws");
+
+  const [backendConnected, setBackendConnected] = useState(false);
   const [intrusion, setIntrusion] = useState({
     detected: false,
     time: null,
     distance: null,
   });
 
-  // Poll intrusion status
-  // Poll intrusion status
+  // Keep websocket connected with retry so alerts recover after backend restarts.
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8000/ws");
+    let ws;
+    let reconnectTimer;
+    let isUnmounted = false;
 
-    ws.onopen = () => {
-      console.log("✅ WebSocket Connected");
+    const connect = () => {
+      ws = new WebSocket(`${websocketBaseUrl}/ws`);
+
+      ws.onopen = () => {
+        setBackendConnected(true);
+        console.log("WebSocket connected");
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "intrusion" || data.alert === "intrusion") {
+          setIntrusion({
+            detected: true,
+            time: data.time,
+            distance: data.distance || null,
+          });
+        } else if (data.type === "reset") {
+          setIntrusion({
+            detected: false,
+            time: null,
+            distance: null,
+          });
+        }
+      };
+
+      ws.onclose = () => {
+        setBackendConnected(false);
+        if (!isUnmounted) {
+          reconnectTimer = setTimeout(connect, 2000);
+        }
+      };
+
+      ws.onerror = () => {
+        setBackendConnected(false);
+        ws.close();
+      };
     };
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      // 1. Listen for the Intrusion Alert
-      if (data.type === "intrusion") {
-        setIntrusion({
-          detected: true,
-          time: data.time,
-          distance: data.distance || null,
-        });
-      }
-      // 2. Listen for the Reset Confirmation
-      else if (data.type === "reset") {
-        setIntrusion({
-          detected: false,
-          time: null,
-          distance: null,
-        });
-      }
-    };
-
-    ws.onclose = () => {
-      console.log("❌ WebSocket Disconnected");
-    };
+    connect();
 
     return () => {
-      ws.close();
+      isUnmounted = true;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+      if (ws) {
+        ws.close();
+      }
     };
-  }, []);
+  }, [websocketBaseUrl]);
 
   // NEW: Function to unfreeze the backend
   const handleReset = async () => {
     try {
-      const response = await fetch("http://localhost:8000/reset");
+      const response = await fetch(`${backendBaseUrl}/reset`);
       if (response.ok) {
         // Optimistically clear the UI alert immediately
         setIntrusion({ detected: false, time: null, distance: null });
@@ -67,11 +91,23 @@ const WebcamView = () => {
     <div className="mt-8 flex flex-col items-center">
       <h1 className="text-2xl font-bold mb-4">🌲 Forest Surveillance System</h1>
 
+      <div
+        className={`mb-4 px-4 py-2 rounded-md text-sm font-semibold ${
+          backendConnected
+            ? "bg-green-100 text-green-800"
+            : "bg-yellow-100 text-yellow-800"
+        }`}
+      >
+        {backendConnected
+          ? "Backend Connected"
+          : "Backend Disconnected - start FastAPI server"}
+      </div>
+
       {/* Live Stream From Backend */}
       <div className="border-4 border-gray-800 rounded-lg overflow-hidden shadow-lg">
         {/* We use a cache-busting trick (?t=...) occasionally if browsers aggressively cache frozen MJPEG streams, but standard src usually works fine */}
         <img
-          src="http://localhost:8000/video"
+          src={`${backendBaseUrl}/video`}
           alt="Live Surveillance Feed"
           className="w-full lg:h-[720px]"
         />
